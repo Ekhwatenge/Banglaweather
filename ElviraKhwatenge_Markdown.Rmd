@@ -1,0 +1,186 @@
+---
+title: "Elvira Khwatenge programming test"
+output: html_document
+date: "2024-04-17"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+library(readxl)
+
+test_data <- read_xlsx("C:/Users/elvir/anaconda3/data/IMPACT-Data-test-annexes/Annex 1 - REACH TEST DATA.xlsm")
+village <-read_xlsx("C:/Users/elvir/anaconda3/data/IMPACT-Data-test-annexes/village.xlsm")
+```
+
+
+
+
+
+
+
+
+
+```{r}
+test_data <- test_data %>%
+  mutate(handwashing_check = case_when(handwashingfull=="No Handwashing facility" & `Frequency.respondant.report.handwhashing.a.day` =="7 times and more" ~ TRUE
+                                        ,.default= FALSE ))
+str(test_data)
+```
+
+# Question 13
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+test_data <- test_data %>%
+  mutate(diarrhea_under_5= case_when(InterviewID == "baseline1000" & diarrhea_under_5=="Yes"~"NA", .default= diarrhea_under_5)
+         ,Improvedsanitationfacility = case_when(InterviewID=="uuid:fde636f2-60d5-4c61-bdb8-be783b8e207f" & Improvedsanitationfacility =="Improved toilet facility" ~"Unimproved toilet facility",.default = Improvedsanitationfacility ))
+
+```
+
+# Question 14
+
+```{r}
+test_data %>%
+  group_by(data_collection_round, house_type) %>%
+  summarise(n=n(), prop=n/sum(n)) %>%
+  mutate(prop = n / sum(n))
+
+```
+
+# Question 15
+
+```{r}
+check_outliers <- function(column_to_check) {
+  # Ignore missing values
+  column_to_check <- column_to_check[!is.na(column_to_check)]
+  
+  # Calculate mean and standard deviation
+  mean_value <- mean(column_to_check)
+  sd_value <- sd(column_to_check)
+  
+  # Calculate the lower and upper bounds for outliers
+  lower_bound <- mean_value - 3 * sd_value
+  upper_bound <- mean_value + 3 * sd_value
+  
+  # Check for outliers
+  outliers <- column_to_check < lower_bound | column_to_check > upper_bound
+  
+  return(outliers)
+}
+
+
+check_outliers(test_data$Number.adult.household.members.years.old)
+
+```
+# Question 16
+
+```{r}
+
+village$InterviewID <- village$uuid
+test_data <- inner_join(test_data, village, by = c("InterviewID","data_collection_round"))
+
+```
+
+
+# Question 17
+
+```{r}
+test_data %>%
+  group_by(data_collection_round, handwashingfull) %>%
+  summarise(n=n()) %>%
+  mutate(perc = n / sum(n) *100 )%>%
+ggplot(aes(x = data_collection_round,y=perc, fill = handwashingfull)) +
+geom_col() +
+scale_fill_brewer() +
+labs(x = "Round", y = "Percent",
+title = "Percentage of type of hand washing facility for each round")
+```
+# Question 18
+
+```{r}
+
+# Function to count missing values in a vector
+count_missing <- function(x) {
+  sum(case_when(x=="NA" | is.na(x) == TRUE ~1,.default=0))
+}
+
+# Apply the function to each column of the data frame
+missing_counts <- apply(test_data, 2, count_missing)
+
+# Convert the result to a list
+missing_list <- as.list(missing_counts)
+
+missing_list
+```
+## Analysis
+
+# Question 12
+
+
+```{r}
+
+test_data %>%
+  mutate( safe_water = case_when( drinking_water_source %in% c("Protected dug well", "Piped water to yard or plot","Piped water into dwelling (house)","Bottled water", "Tube well or borehole","Public tap or standpipe", "Protected spring")~ "Improved water source"
+                                  ,drinking_water_source %in% c("Cart with small tank or drum","Unprotected dug well", "Unprotected spring", "Surface water","Tanker-truck","Rainwater collection","Other")~"Unimproved water source")) %>%
+  filter(is.na(safe_water)==0 & data_collection_round =="Baseline")%>%
+  group_by( safe_water)%>%
+  summarise(n=n())%>%
+  mutate(perc = n/sum(n)*100)
+
+```
+The % of households having access to safe drinking  source of water is 92.0% at baseline
+
+# Question 13
+
+Access to safe water for single headed household at Baseline
+```{r}
+
+test_data %>%
+  mutate( safe_water = case_when( drinking_water_source %in% c("Protected dug well", "Piped water to yard or plot","Piped water into dwelling (house)","Bottled water", "Tube well or borehole","Public tap or standpipe", "Protected spring")~ "Improved water source"
+                                  ,drinking_water_source %in% c("Cart with small tank or drum","Unprotected dug well", "Unprotected spring", "Surface water","Tanker-truck","Rainwater collection","Other")~"Unimproved water source")) %>%
+  filter(is.na(safe_water)==0 & data_collection_round =="Baseline" & single_headed_household =="Yes")%>%
+  group_by( safe_water)%>%
+  summarise(n=n())%>%
+  mutate(perc = n/sum(n)*100)
+
+```
+
+
+Access to safe water for single headed household in End-line
+```{r}
+
+test_data %>%
+  mutate( safe_water = case_when( drinking_water_source %in% c("Protected dug well", "Piped water to yard or plot","Piped water into dwelling (house)","Bottled water", "Tube well or borehole","Public tap or standpipe", "Protected spring")~ "Improved water source"
+                                  ,drinking_water_source %in% c("Cart with small tank or drum","Unprotected dug well", "Unprotected spring", "Surface water","Tanker-truck","Rainwater collection","Other")~"Unimproved water source")) %>%
+  filter(is.na(safe_water)==0 & data_collection_round =="End-line" & single_headed_household =="Yes")%>%
+  group_by( safe_water)%>%
+  summarise(n=n())%>%
+  mutate(perc = n/sum(n)*100)
+
+```
+The access changed from 91% to 97%, so access to safe water increased between the period.
+
+
+# Question 14
+
+
+
+```{r}
+test_data %>%
+  group_by(data_collection_round, diarrhea_under_5) %>%
+  summarise(n=n()) %>%
+  mutate(perc = n / sum(n) *100 )%>%
+  filter(diarrhea_under_5=="Yes")%>%
+ggplot(aes(x = data_collection_round,y=perc)) +
+geom_col() +
+scale_fill_brewer() +
+labs(x = "Round", y = "Percent",
+title = "% of households with cases of diarrhea of children under 5 at the baseline and endline")
+```
+
+Yes, the graph is correct rounded off to the nearest digit
+
